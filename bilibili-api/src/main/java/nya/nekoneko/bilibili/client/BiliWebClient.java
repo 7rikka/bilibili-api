@@ -114,87 +114,6 @@ public class BiliWebClient extends BiliClient {
         ONode data = result.getData();
         BiliArchive.builder()
                 .build();
-        //{
-        //            "mid": 2062760,
-        //            "tp_info": {
-        //                "parent_tp": {
-        //                    "id": 4,
-        //                    "parent": 0,
-        //                    "name": "游戏"
-        //                },
-        //                "tp": {
-        //                    "id": 65,
-        //                    "parent": 4,
-        //                    "name": "网络游戏"
-        //                }
-        //            },
-        //            "author": "",
-        //            "reject_reason": "",
-        //            "reject_reason_url": "",
-        //            "duration": 18651,
-        //            "ugcpay": 0,
-        //            "order_id": 0,
-        //            "order_name": "",
-        //            "adorder_id": 0,
-        //            "adorder_name": "",
-        //            "adorder_no": "",
-        //            "online_time": 0,
-        //            "new_adorder_info": null,
-        //            "mission_id": 0,
-        //            "mission_name": "",
-        //            "attribute": 0,
-        //            "state": 0,
-        //            "state_desc": "开放浏览",
-        //            "state_panel": 0,
-        //            "desc_format_id": 33,
-        //            "attrs": {
-        //                "is_coop": 0,
-        //                "is_owner": 1,
-        //                "is_dynamic": 0,
-        //                "is_360": -1,
-        //                "is_dolby": 0,
-        //                "no_public": 0,
-        //                "live": 0,
-        //                "is_premiere": 0,
-        //                "is_played": 0,
-        //                "lossless_music": 0
-        //            },
-        //            "porder": null,
-        //            "poi_object": null,
-        //            "dtime": 0,
-        //            "ptime": 1689486752, 2023-07-16 13:52:32
-        //            "ctime": 1689454092, 2023-07-16 04:48:12
-        //            "ugcpay_info": null,
-        //            "staffs": [],
-        //            "vote": null,
-        //            "activity": null,
-        //            "interactive": 0,
-        //            "hl": null,
-        //            "no_background": 0,
-        //            "dynamic_video": 0,
-        //            "no_public": 0,
-        //            "is_360": -1,
-        //            "is_dolby": 0,
-        //            "lossless_music": 0,
-        //            "bs_editor": 0,
-        //            "up_from": 8,
-        //            "desc_v2": null,
-        //            "dynamic_v2": null,
-        //            "topic_id": 0,
-        //            "topic_name": "",
-        //            "topic_stat": 0,
-        //            "premiere": 0,
-        //            "is_ugcpay_v2": 0,
-        //            "recreate": {
-        //                "auth": 1,
-        //                "editable": 1,
-        //                "switch": -1
-        //            },
-        //            "political_media": 0,
-        //            "political_editable": 0,
-        //            "charging_pay": 0
-        //        }
-
         ONode videosNode = data.get("videos");
         videosNode.forEach(n -> {
             BiliArchiveVideo.builder()
@@ -213,22 +132,6 @@ public class BiliWebClient extends BiliClient {
                     .createTime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
                     .build();
 
-            //{
-            //                "title": "P8-[1871942121]2520~2879",
-            //                "filename": "n230715sa2qv0tgipzw1pq21cmdf2fb2",
-            //                "cid": 1197582299,
-            //                "duration": 3601,
-            //                "index": 8,
-            //                "status": 0,
-            //                "status_desc": "",
-            //                "reject_reason": "",
-            //                "reject_reason_url": "",
-            //                "fail_code": 0,
-            //                "fail_desc": "",
-            //                "xcode_state": 6,
-            //                "ctime": 1689421282
-            //            },
-            //
 
             //fail_code
             //0 正常
@@ -392,6 +295,34 @@ public class BiliWebClient extends BiliClient {
      */
     public void submitArchive(BiliArchive archive) {
         submitArchive(archive, null);
+    }
+
+    public BiliWatermarkSetting getWatermarkSetting() {
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://member.bilibili.com/x/web/watermark")
+                .addParam("csrf", credential.getBiliJct())
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        result = result.replaceAll("\\\\\"", "\"")
+                .replaceAll("\"\\{", "{")
+                .replaceAll("\\}\"", "}");
+        ONode node = ONode.loadStr(result);
+        ONode d = node.get("data");
+        return BiliWatermarkSetting.builder()
+                .id(d.get("id").getInt())
+                .uid(d.get("mid").getLong())
+                .uname(d.get("uname").getString())
+                .state(d.get("state").getInt())
+                .type(d.get("type").getInt())
+                .position(d.get("position").getInt())
+                .url(d.get("url").getString())
+                .md5(d.get("md5").getString())
+                .width(d.get("info").get("width").getInt())
+                .height(d.get("info").get("height").getInt())
+                .ctime(TimeUtil.stringToLocalDateTime(d.get("ctime").getString()))
+                .mtime(TimeUtil.stringToLocalDateTime(d.get("mtime").getString()))
+                .build();
     }
 }
 

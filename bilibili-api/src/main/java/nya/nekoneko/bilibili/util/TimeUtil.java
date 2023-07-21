@@ -21,6 +21,9 @@ public class TimeUtil {
      */
     public static LocalDateTime timestampToLocalDateTime(Integer timestamp) {
         return Timestamp.from(Instant.ofEpochSecond(timestamp)).toLocalDateTime();
-
+    }
+    public static LocalDateTime stringToLocalDateTime(String s) {
+        String text = s.split("\\+")[0].replaceAll("T", " ");
+        return LocalDateTime.parse(text, DATE_TIME_FORMATTER);
     }
 }
