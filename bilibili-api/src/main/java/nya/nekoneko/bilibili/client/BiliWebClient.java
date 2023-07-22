@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import nya.nekoneko.bilibili.core.BiliRequestFactor;
 import nya.nekoneko.bilibili.model.*;
+import nya.nekoneko.bilibili.model.enums.BiliWatermarkPosition;
 import nya.nekoneko.bilibili.util.TimeUtil;
 import nya.nekoneko.bilibili.util.UrlUtil;
 import org.noear.snack.ONode;
@@ -297,6 +298,11 @@ public class BiliWebClient extends BiliClient {
         submitArchive(archive, null);
     }
 
+    /**
+     * 获取个人水印配置
+     *
+     * @return
+     */
     public BiliWatermarkSetting getWatermarkSetting() {
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/web/watermark")
@@ -309,13 +315,22 @@ public class BiliWebClient extends BiliClient {
                 .replaceAll("\\}\"", "}");
         ONode node = ONode.loadStr(result);
         ONode d = node.get("data");
+        int position = d.get("position").getInt();
+        BiliWatermarkPosition p;
+        switch (position) {
+            case 1 -> p = BiliWatermarkPosition.TOP_LEFT;
+            case 2 -> p = BiliWatermarkPosition.TOP_RIGHT;
+            case 3 -> p = BiliWatermarkPosition.BOTTOM_LEFT;
+            case 4 -> p = BiliWatermarkPosition.BOTTOM_RIGHT;
+            default -> p = null;
+        }
         return BiliWatermarkSetting.builder()
                 .id(d.get("id").getInt())
                 .uid(d.get("mid").getLong())
                 .uname(d.get("uname").getString())
-                .state(d.get("state").getInt())
+                .enable(d.get("state").getInt() == 1)
                 .type(d.get("type").getInt())
-                .position(d.get("position").getInt())
+                .position(p)
                 .url(d.get("url").getString())
                 .md5(d.get("md5").getString())
                 .width(d.get("info").get("width").getInt())
