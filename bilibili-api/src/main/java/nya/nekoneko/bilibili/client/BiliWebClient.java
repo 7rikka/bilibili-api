@@ -339,6 +339,41 @@ public class BiliWebClient extends BiliClient {
                 .mtime(TimeUtil.stringToLocalDateTime(d.get("mtime").getString()))
                 .build();
     }
+
+    private BiliArchiveStat getArchiveStat(Integer aid, String bvid) {
+        String s = BiliRequestFactor.getBiliRequest()
+                .url("https://api.bilibili.com/x/web-interface/archive/stat")
+                .addParam("aid", aid)
+                .addParam("bvid", bvid)
+                .buildRequest()
+                .doCallGetString();
+        ONode node = ONode.loadStr(s);
+        ONode n = node.get("data");
+        return BiliArchiveStat.builder()
+                .aid(n.get("aid").getInt())
+                .bvid(n.get("bvid").getString())
+                .view(n.get("view").getInt())
+                .danmaku(n.get("danmaku").getInt())
+                .reply(n.get("reply").getInt())
+                .favorite(n.get("favorite").getInt())
+                .coin(n.get("coin").getInt())
+                .share(n.get("share").getInt())
+                .like(n.get("like").getInt())
+                .nowRank(n.get("now_rank").getInt())
+                .hisRank(n.get("his_rank").getInt())
+                .noReprint(n.get("no_reprint").getInt())
+                .copyright(n.get("copyright").getInt())
+                .build();
+
+    }
+
+    public BiliArchiveStat getArchiveStat(Integer aid) {
+        return getArchiveStat(aid, null);
+    }
+
+    public BiliArchiveStat getArchiveStat(String bvid) {
+        return getArchiveStat(null, bvid);
+    }
 }
 
 
