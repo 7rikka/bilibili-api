@@ -185,7 +185,8 @@ public class UposUploader {
                         .buildRequest()
                         .doCallGetString();
                 //进度条+1
-                progress.add(data.length, request);
+//                progress.add(data.length, request);
+                progress.add(data.length);
                 break;
             } catch (Exception e) {
                 log.info(info + "发生异常, 3秒后重新上传.");

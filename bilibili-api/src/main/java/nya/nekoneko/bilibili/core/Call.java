@@ -45,8 +45,8 @@ public class Call {
     public static String doCallGetString(Request request) {
         try {
             Response response = client.newCall(request).execute();
-            Headers headers = response.headers();
-            Iterator<Pair<String, String>> iterator = headers.iterator();
+//            Headers headers = response.headers();
+//            Iterator<Pair<String, String>> iterator = headers.iterator();
 //            while (iterator.hasNext()) {
 //                Pair<String, String> next = iterator.next();
 //                System.out.println(next);
@@ -64,7 +64,7 @@ public class Call {
             }
 //            BiliRequestHandler.process(response.headers());
             return body.string().strip();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RequestException(request, null, e.getMessage());
         }
@@ -82,7 +82,7 @@ public class Call {
                 throw new RequestException(request, response, "Body为空");
             }
             return body.bytes();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RequestException(request, null, e.getMessage());
         }
@@ -100,7 +100,7 @@ public class Call {
                 throw new RequestException(request, response, "Body为空");
             }
             return body.byteStream();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RequestException(request, null, e.getMessage());
         }
@@ -114,7 +114,7 @@ public class Call {
                 throw new RequestException(request, response, "HTTP CODE: " + response.code());
             }
             return response.header(headerName);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RequestException(request, null, e.getMessage());
         }
@@ -131,7 +131,7 @@ public class Call {
                 throw new RequestException(request, response, "HTTP CODE: " + response.code(), body);
             }
             return response;
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RequestException(request, null, e.getMessage());
         }

@@ -37,10 +37,6 @@ public class BiliArchiveVideo {
     /**
      *
      */
-    private String desc;
-    /**
-     *
-     */
     private Integer duration;
     /**
      *
@@ -53,5 +49,5 @@ public class BiliArchiveVideo {
     private Integer failCode;
     private String failDesc;
     private Integer xCodeState;
-    private LocalDateTime createTime;
+    private LocalDateTime ctime;
 }

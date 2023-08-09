@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import static nya.nekoneko.bilibili.util.BiliUtil.checkBvid;
+
 /**
  * @author Rikka
  */
@@ -103,7 +105,7 @@ public class BiliWebClient extends BiliClient {
         return result.getData().toObjectList(String.class);
     }
 
-    public BiliArchive getArchiveDetail(Integer aid, String bvid) {
+    private BiliArchive getArchiveDetail(Integer aid, String bvid) {
         BiliResult result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/view")
                 .addParam("aid", aid)
@@ -112,8 +114,13 @@ public class BiliWebClient extends BiliClient {
                 .cookie(credential)
                 .buildRequest()
                 .doCall();
+        System.out.println(result);
         ONode data = result.getData();
+        ONode archive = data.get("archive");
         BiliArchive.builder()
+                .aid(archive.get("aid").getInt())
+                .bvid(archive.get("bvid").getString())
+
                 .build();
         ONode videosNode = data.get("videos");
         videosNode.forEach(n -> {
@@ -130,7 +137,7 @@ public class BiliWebClient extends BiliClient {
                     .failCode(n.get("fail_code").getInt())
                     .failDesc(n.get("fail_desc").getString())
                     .xCodeState(n.get("xcode_state").getInt())
-                    .createTime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
+                    .ctime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
                     .build();
 
 
@@ -239,7 +246,6 @@ public class BiliWebClient extends BiliClient {
             //必填
             videoNode.set("filename", video.getFilename());
             videoNode.set("title", video.getTitle());
-            videoNode.set("desc", video.getDesc());
             node1.addNode(videoNode);
         }
         node.set("videos", node1);
@@ -254,21 +260,27 @@ public class BiliWebClient extends BiliClient {
                     node.set("act_reserve_create", 1);
                 }
             }
+            //评论精选
             if (setting.isSelectionReply()) {
                 node.set("up_selection_reply", true);
             }
+            //关闭评论
             if (setting.isCloseReply()) {
                 node.set("up_close_reply", true);
             }
+            //关闭弹幕
             if (setting.isCloseDanmaku()) {
                 node.set("up_close_danmu", true);
             }
+            //启用充电面板
             if (setting.isOpenElecPanel()) {
                 node.set("open_elec", 1);
             }
+            //杜比音效
             if (setting.isEnableDolby()) {
                 node.set("dolby", 1);
             }
+            //Hi-Res无损音频
             if (setting.isEnableLosslessMusic()) {
                 node.set("lossless_music", 1);
             }
@@ -341,6 +353,9 @@ public class BiliWebClient extends BiliClient {
     }
 
     private BiliArchiveStat getArchiveStat(Integer aid, String bvid) {
+        if (null != bvid) {
+            checkBvid(bvid);
+        }
         String s = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/web-interface/archive/stat")
                 .addParam("aid", aid)
@@ -364,7 +379,6 @@ public class BiliWebClient extends BiliClient {
                 .noReprint(n.get("no_reprint").getInt())
                 .copyright(n.get("copyright").getInt())
                 .build();
-
     }
 
     public BiliArchiveStat getArchiveStat(Integer aid) {
