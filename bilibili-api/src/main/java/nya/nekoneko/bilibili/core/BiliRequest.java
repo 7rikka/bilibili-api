@@ -2,7 +2,6 @@ package nya.nekoneko.bilibili.core;
 
 import nya.nekoneko.bilibili.model.BiliLoginCredential;
 import nya.nekoneko.bilibili.model.BiliResult;
-import nya.nekoneko.bilibili.util.UrlUtil;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -22,16 +21,15 @@ public class BiliRequest {
     private static final MediaType XML = MediaType.parse("application/xml");
     private static final MediaType OCTET_STREAM = MediaType.parse("application/octet-stream");
     private final Request.Builder builder = new Request.Builder();
-
+    /**
+     * 本次请求的Parameter
+     */
+    private final Map<String, String> paramMap = new HashMap<>();
     private Request request;
     /**
      * 本次请求的URL
      */
     private String url;
-    /**
-     * 本次请求的Parameter
-     */
-    private final Map<String, String> paramMap = new HashMap<>();
 
     public BiliRequest url(String url) {
         this.url = url;
@@ -52,13 +50,16 @@ public class BiliRequest {
         }
         return this;
     }
+
     public BiliRequest addParams(Map<String, String> params) {
         if (null != params) {
             params.entrySet().stream().forEach(entry -> {
-                paramMap.put(entry.getKey(), entry.getValue());});
+                paramMap.put(entry.getKey(), entry.getValue());
+            });
         }
         return this;
     }
+
     /**
      * 生成完整的URL
      *
@@ -153,8 +154,17 @@ public class BiliRequest {
 
     public BiliRequest cookie(BiliLoginCredential credential) {
         if (null != credential) {
-            String cookie = "DedeUserID=" + credential.getDedeUserId() + "; SESSDATA=" + credential.getSessData() + "; bili_jct=" + credential.getBiliJct();
-            builder.header("Cookie", cookie);
+            String cookie = "";
+            if (null != credential.getDedeUserId()) {
+                cookie = cookie + "DedeUserID=" + credential.getDedeUserId() + "; ";
+            }
+            if (null != credential.getSessData()) {
+                cookie = cookie + "SESSDATA=" + credential.getSessData() + "; ";
+            }
+            if (null != credential.getBiliJct()) {
+                cookie = cookie + "bili_jct=" + credential.getBiliJct() + "; ";
+            }
+            builder.header("Cookie", cookie.strip());
         }
         return this;
     }
