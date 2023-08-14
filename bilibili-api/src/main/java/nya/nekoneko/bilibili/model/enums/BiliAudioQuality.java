@@ -25,6 +25,6 @@ public enum BiliAudioQuality {
                 return enumConstant;
             }
         }
-        throw new RuntimeException("Error Audio Quality Code.");
+        throw new RuntimeException("Error Audio Quality Code: "+code);
     }
 }

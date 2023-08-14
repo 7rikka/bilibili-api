@@ -230,4 +230,7 @@ public class BiliRequest {
 //        System.out.println(request);
         return Call.doCall(request);
     }
+    public InputStream doCallGetInputStream(){
+        return Call.doCallGetInputStream(request);
+    }
 }

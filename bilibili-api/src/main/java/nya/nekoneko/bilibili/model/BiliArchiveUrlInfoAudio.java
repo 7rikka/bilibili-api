@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nya.nekoneko.bilibili.model.enums.BiliAudioQuality;
-import nya.nekoneko.bilibili.model.enums.BiliVideoCodec;
-import nya.nekoneko.bilibili.model.enums.BiliVideoQuality;
 
 import java.util.List;
 
@@ -17,7 +15,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BiliVideoUrlInfoAudio {
+public class BiliArchiveUrlInfoAudio {
     private BiliAudioQuality quality;
     private List<String> urlList;
 }
