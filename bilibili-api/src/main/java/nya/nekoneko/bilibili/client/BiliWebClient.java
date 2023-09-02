@@ -6,6 +6,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import nya.nekoneko.bilibili.core.BiliRequestFactor;
 import nya.nekoneko.bilibili.model.*;
+import nya.nekoneko.bilibili.model.enums.BiliAudioQuality;
+import nya.nekoneko.bilibili.model.enums.BiliVideoCodec;
+import nya.nekoneko.bilibili.model.enums.BiliVideoQuality;
 import nya.nekoneko.bilibili.model.enums.BiliWatermarkPosition;
 import nya.nekoneko.bilibili.util.TimeUtil;
 import nya.nekoneko.bilibili.util.UrlUtil;
@@ -13,6 +16,7 @@ import org.noear.snack.ONode;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 
 import static nya.nekoneko.bilibili.util.BiliUtil.checkBvid;
@@ -84,7 +88,7 @@ public class BiliWebClient extends BiliClient {
         } else if (86090 == code) {
             return new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.NO_CONFIRM, message, null);
         } else {
-            throw new RuntimeException();
+            throw new RuntimeException("Error Code: " + code);
         }
     }
 
@@ -315,43 +319,43 @@ public class BiliWebClient extends BiliClient {
      *
      * @return
      */
-    public BiliWatermarkSetting getWatermarkSetting() {
-        String result = BiliRequestFactor.getBiliRequest()
-                .url("https://member.bilibili.com/x/web/watermark")
-                .addParam("csrf", credential.getBiliJct())
-                .cookie(credential)
-                .buildRequest()
-                .doCallGetString();
-        result = result.replaceAll("\\\\\"", "\"")
-                .replaceAll("\"\\{", "{")
-                .replaceAll("\\}\"", "}");
-        ONode node = ONode.loadStr(result);
-        ONode d = node.get("data");
-        int position = d.get("position").getInt();
-        BiliWatermarkPosition p;
-        switch (position) {
-            case 1 -> p = BiliWatermarkPosition.TOP_LEFT;
-            case 2 -> p = BiliWatermarkPosition.TOP_RIGHT;
-            case 3 -> p = BiliWatermarkPosition.BOTTOM_LEFT;
-            case 4 -> p = BiliWatermarkPosition.BOTTOM_RIGHT;
-            default -> p = null;
-        }
-        return BiliWatermarkSetting.builder()
-                .id(d.get("id").getInt())
-                .uid(d.get("mid").getLong())
-                .uname(d.get("uname").getString())
-                .enable(d.get("state").getInt() == 1)
-                .type(d.get("type").getInt())
-                .position(p)
-                .url(d.get("url").getString())
-                .md5(d.get("md5").getString())
-                .width(d.get("info").get("width").getInt())
-                .height(d.get("info").get("height").getInt())
-                .ctime(TimeUtil.stringToLocalDateTime(d.get("ctime").getString()))
-                .mtime(TimeUtil.stringToLocalDateTime(d.get("mtime").getString()))
-                .build();
-    }
-
+//    public BiliWatermarkSetting getWatermarkSetting() {
+//        String result = BiliRequestFactor.getBiliRequest()
+//                .url("https://member.bilibili.com/x/web/watermark")
+//                .addParam("csrf", credential.getBiliJct())
+//                .cookie(credential)
+//                .buildRequest()
+//                .doCallGetString();
+//        result = result.replaceAll("\\\\\"", "\"")
+//                .replaceAll("\"\\{", "{")
+//                .replaceAll("\\}\"", "}");
+//        ONode node = ONode.loadStr(result);
+//        ONode d = node.get("data");
+//        int position = d.get("position").getInt();
+//        BiliWatermarkPosition p;
+//        switch (position) {
+//            case 1 -> p = BiliWatermarkPosition.TOP_LEFT;
+//            case 2 -> p = BiliWatermarkPosition.TOP_RIGHT;
+//            case 3 -> p = BiliWatermarkPosition.BOTTOM_LEFT;
+//            case 4 -> p = BiliWatermarkPosition.BOTTOM_RIGHT;
+//            default -> p = null;
+//        }
+//        return BiliWatermarkSetting.builder()
+//                .id(d.get("id").getInt())
+//                .uid(d.get("mid").getLong())
+//                .uname(d.get("uname").getString())
+//                .enable(d.get("state").getInt() == 1)
+//                .type(d.get("type").getInt())
+//                .position(p)
+//                .url(d.get("url").getString())
+//                .md5(d.get("md5").getString())
+//                .width(d.get("info").get("width").getInt())
+//                .height(d.get("info").get("height").getInt())
+//                .ctime(TimeUtil.stringToLocalDateTime(d.get("ctime").getString()))
+//                .mtime(TimeUtil.stringToLocalDateTime(d.get("mtime").getString()))
+//                .build();
+//    }
+    @Deprecated
     private BiliArchiveStat getArchiveStat(Integer aid, String bvid) {
         if (null != bvid) {
             checkBvid(bvid);
@@ -381,12 +385,164 @@ public class BiliWebClient extends BiliClient {
                 .build();
     }
 
+    @Deprecated
     public BiliArchiveStat getArchiveStat(Integer aid) {
         return getArchiveStat(aid, null);
     }
 
+    @Deprecated
     public BiliArchiveStat getArchiveStat(String bvid) {
         return getArchiveStat(null, bvid);
+    }
+
+    /**
+     * 获取分p播放地址
+     *
+     * @param aid
+     * @param cid
+     * @return
+     */
+    public BiliArchivePlayUrlInfo getArchivePlayUrlInfo(Integer aid, Integer cid) {
+        return getArchivePlayUrlInfo(aid, null, cid);
+    }
+
+    /**
+     * 获取分p播放地址
+     *
+     * @param bvid
+     * @param cid
+     * @return
+     */
+    public BiliArchivePlayUrlInfo getArchivePlayUrlInfo(String bvid, Integer cid) {
+        return getArchivePlayUrlInfo(null, bvid, cid);
+    }
+
+    /**
+     * 获取分p播放地址
+     *
+     * @param aid
+     * @param bvid
+     * @param cid
+     * @return
+     */
+    private BiliArchivePlayUrlInfo getArchivePlayUrlInfo(Integer aid, String bvid, Integer cid) {
+        String s = BiliRequestFactor.getBiliRequest()
+                .url("https://api.bilibili.com/x/player/wbi/playurl")
+                .addParam("avid", aid)
+                .addParam("bvid", bvid)
+                .addParam("cid", cid)
+                .addParam("qn", "127")
+                .addParam("fnval", "4048")
+//                .addParam("fourk", "1")
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        System.out.println(s);
+        ONode data = ONode.loadStr(s).get("data");
+        List<BiliVideoQuality> list = new ArrayList<>();
+        for (int i = 0; i < data.get("accept_quality").count(); i++) {
+            list.add(BiliVideoQuality.of(data.get("accept_quality").get(i).getInt()));
+        }
+        //视频流
+        ONode dash = data.get("dash");
+        ONode video = dash.get("video");
+        List<BiliArchiveUrlInfoVideo> videoList = new ArrayList<>();
+        for (int i = 0; i < video.count(); i++) {
+            ONode v = video.get(i);
+            List<String> backupUrl = v.get("backup_url").toObjectList(String.class);
+            backupUrl.add(0, v.get("base_url").getString());
+            videoList.add(BiliArchiveUrlInfoVideo.builder()
+                    .quality(BiliVideoQuality.of(v.get("id").getInt()))
+                    .urlList(backupUrl)
+                    .width(v.get("width").getInt())
+                    .height(v.get("height").getInt())
+                    .frameRate(v.get("frame_rate").getString())
+                    .codec(BiliVideoCodec.of(v.get("codecid").getInt()))
+                    .build());
+        }
+        //音频流
+        List<BiliArchiveUrlInfoAudio> audioList = new ArrayList<>();
+        ONode audio = dash.get("audio");
+        for (int i = 0; i < audio.count(); i++) {
+            ONode a = audio.get(i);
+            List<String> backupUrl = a.get("backup_url").toObjectList(String.class);
+            backupUrl.add(0, a.get("base_url").getString());
+            audioList.add(BiliArchiveUrlInfoAudio.builder()
+                    .quality(BiliAudioQuality.of(a.get("id").getInt()))
+                    .urlList(backupUrl)
+                    .build());
+        }
+        //杜比全景声
+        ONode dolby = dash.get("dolby");
+        ONode dolbyAudio = dolby.get("audio");
+        for (int i = 0; i < dolbyAudio.count(); i++) {
+            ONode db = dolbyAudio.get(i);
+            List<String> backupUrl = db.get("backup_url").toObjectList(String.class);
+            backupUrl.add(0, db.get("base_url").getString());
+            audioList.add(BiliArchiveUrlInfoAudio.builder()
+                    .quality(BiliAudioQuality.of(db.get("id").getInt()))
+                    .urlList(backupUrl)
+                    .build());
+        }
+        //无损音轨
+        ONode flac = dash.get("flac");
+        if (!flac.get("audio").isNull()) {
+            ONode flacAudio = flac.get("audio");
+            List<String> backupUrl = flacAudio.get("backup_url").toObjectList(String.class);
+            backupUrl.add(0, flacAudio.get("base_url").getString());
+            audioList.add(BiliArchiveUrlInfoAudio.builder()
+                    .quality(BiliAudioQuality.of(flacAudio.get("id").getInt()))
+                    .urlList(backupUrl)
+                    .build());
+        }
+        //排序
+        audioList.sort((o1, o2) -> o2.getQuality().getCode() - o1.getQuality().getCode());
+        return BiliArchivePlayUrlInfo.builder()
+                .currentQuality(BiliVideoQuality.of(data.get("quality").getInt()))
+                .length(data.get("timelength").getInt())
+                .acceptQuality(list)
+                .videoList(videoList)
+                .audioList(audioList)
+                .build();
+    }
+
+    /**
+     * 获取分P信息
+     *
+     * @param aid
+     * @return
+     */
+    public List<BiliPageInfo> getPageList(Integer aid) {
+        return getPageList(aid, null);
+    }
+
+    /**
+     * 获取分P信息
+     *
+     * @param bvid
+     * @return
+     */
+    public List<BiliPageInfo> getPageList(String bvid) {
+        return getPageList(null, bvid);
+    }
+
+    /**
+     * 获取分P信息
+     *
+     * @param aid
+     * @param bvid
+     * @return
+     */
+    private List<BiliPageInfo> getPageList(Integer aid, String bvid) {
+        String s = BiliRequestFactor.getBiliRequest()
+                .url("https://api.bilibili.com/x/player/pagelist")
+                .addParam("aid", aid)
+                .addParam("bvid", bvid)
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        ONode node = ONode.loadStr(s);
+        return node.get("data").toObjectList(BiliPageInfo.class);
     }
 }
 
