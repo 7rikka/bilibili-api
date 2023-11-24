@@ -46,6 +46,16 @@ public class BiliArchiveVideo {
     private String statusDesc;
     private String rejectReason;
     private String rejectReasonUrl;
+    private String modifyAdvise;
+    private String problemDescription;
+    private String problemDescriptionTitle;
+    private Integer rejectReasonId;
+    /**
+     * 0：
+     * 1：
+     * 9：
+     * 15：
+     */
     private Integer failCode;
     private String failDesc;
     private Integer xCodeState;

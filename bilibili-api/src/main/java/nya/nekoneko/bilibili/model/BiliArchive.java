@@ -51,4 +51,9 @@ public class BiliArchive {
      * 分p列表
      */
     private List<BiliArchiveVideo> videos;
+    /**
+     *
+     */
+//    private String reject_reason;
+//    private String reject_reason_url;
 }

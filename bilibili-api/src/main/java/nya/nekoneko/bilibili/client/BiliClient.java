@@ -5,9 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import nya.nekoneko.bilibili.core.BiliRequestFactor;
 import nya.nekoneko.bilibili.model.*;
-import nya.nekoneko.bilibili.model.enums.BiliAudioQuality;
-import nya.nekoneko.bilibili.model.enums.BiliVideoCodec;
-import nya.nekoneko.bilibili.model.enums.BiliVideoQuality;
+import nya.nekoneko.bilibili.model.enums.*;
 import nya.nekoneko.bilibili.util.TimeUtil;
 import nya.nekoneko.bilibili.util.UrlUtil;
 import org.noear.snack.ONode;
@@ -508,8 +506,8 @@ public class BiliClient {
      * @param aid
      * @return
      */
-    public List<BiliPageInfo> getPageList(Integer aid) {
-        return getPageList(aid, null);
+    public List<BiliPartInfo> getPartList(Integer aid) {
+        return getPartList(aid, null);
     }
 
     /**
@@ -518,8 +516,8 @@ public class BiliClient {
      * @param bvid
      * @return
      */
-    public List<BiliPageInfo> getPageList(String bvid) {
-        return getPageList(null, bvid);
+    public List<BiliPartInfo> getPartList(String bvid) {
+        return getPartList(null, bvid);
     }
 
     /**
@@ -529,7 +527,7 @@ public class BiliClient {
      * @param bvid
      * @return
      */
-    private List<BiliPageInfo> getPageList(Integer aid, String bvid) {
+    private List<BiliPartInfo> getPartList(Integer aid, String bvid) {
         String s = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/player/pagelist")
                 .addParam("aid", aid)
@@ -538,7 +536,106 @@ public class BiliClient {
                 .buildRequest()
                 .doCallGetString();
         ONode node = ONode.loadStr(s);
-        return node.get("data").toObjectList(BiliPageInfo.class);
+        return node.get("data").toObjectList(BiliPartInfo.class);
+    }
+
+    public R<BiliArchive> getMyArchiveList(Integer page, Integer pageSize, BiliArchiveStatusEnum status, String keyword, Integer tid, BiliArchiveOrderType orderType) {
+        //coop: 1
+        //interactive: 1
+        String s = BiliRequestFactor.getBiliRequest()
+                .url("https://member.bilibili.com/x/web/archives")
+                .addParam("status", status.getValue())
+                .addParam("pn", page)
+                .addParam("ps", pageSize)
+                .addParam("keyword", keyword)
+                .addParam("tid", tid)
+                .addParam("order", orderType)
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        System.out.println(s);
+        List<BiliArchive> list = new ArrayList<>();
+        ONode n = ONode.loadStr(s);
+        if (n.exists("code")) {
+            int code = n.get("code").getInt();
+            String message = n.get("message").getRawString();
+            ONode data = n.get("data");
+            ONode archiveListNode = data.get("arc_audits");
+            if (!archiveListNode.isNull()) {
+                //遍历每个视频
+                for (int i = 0; i < archiveListNode.count(); i++) {
+                    ONode v = archiveListNode.get(i);
+                    ONode archive = v.get("Archive");
+//                    System.out.println("title:" + archive.get("title").getRawString());
+//                    System.out.println("reject_reason:" + archive.get("reject_reason").getRawString());
+//                    System.out.println("reject_reason_url:" + archive.get("reject_reason_url").getRawString());
+//                    System.out.println("modify_advise:" + archive.get("modify_advise").getRawString());
+//                    System.out.println("problem_description:" + archive.get("problem_description").getRawString());
+//                    System.out.println("problem_description_title:" + archive.get("problem_description_title").getRawString());
+//                    System.out.println("reject_reason_id:" + archive.get("reject_reason_id").getInt());
+//                    System.out.println("state:" + archive.get("state").getString());
+//                    System.out.println("state_desc:" + archive.get("state_desc").getRawString());
+//                    System.out.println(v.toJson());
+//                    System.out.println("========================");
+                    List<BiliArchiveVideo> videoList = new ArrayList<>();
+                    BiliArchive archive1 = BiliArchive.builder()
+                            .aid(archive.get("aid").getInt())
+                            .bvid(archive.get("bvid").getRawString())
+                            .tid(archive.get("tid").getInt())
+                            .title(archive.get("title").getRawString())
+                            .cover(archive.get("cover").getRawString())
+                            .tag(archive.get("tag").getRawString())
+                            .videos(videoList)
+                            .build();
+                    list.add(archive1);
+                    ONode videos = v.get("Videos");
+                    for (int j = 0; j < videos.count(); j++) {
+                        ONode video = videos.get(j);
+                        videoList.add(
+                                BiliArchiveVideo.builder()
+                                        .title(video.get("title").getRawString())
+                                        .filename(video.get("filename").getRawString())
+                                        .cid(video.get("cid").getInt())
+                                        .duration(video.get("duration").getInt())
+                                        .index(video.get("index").getInt())
+                                        .status(video.get("status").getInt())
+                                        .statusDesc(video.get("status_desc").getRawString())
+                                        .rejectReason(video.get("reject_reason").getRawString())
+                                        .rejectReasonUrl(video.get("reject_reason_url").getRawString())
+                                        .modifyAdvise(video.get("modify_advise").getRawString())
+                                        .problemDescription(video.get("problem_description").getRawString())
+                                        .problemDescriptionTitle(video.get("problem_description_title").getRawString())
+                                        .rejectReasonId(video.get("reject_reason_id").getInt())
+                                        .failCode(video.get("fail_code").getInt())
+                                        .failDesc(video.get("fail_desc").getRawString())
+                                        .xCodeState(video.get("xcode_state").getInt())
+                                        .ctime(TimeUtil.timestampToLocalDateTime(video.get("ctime").getInt()))
+                                        .build());
+
+                    }
+
+                }
+
+            }
+
+            //========
+            //分页信息
+            //========
+            ONode pageNode = data.get("page");
+            BiliPageInfo pageInfo = null;
+            if (!pageNode.isNull()) {
+                pageInfo = BiliPageInfo.builder()
+                        .pageNum(pageNode.get("pn").getInt())
+                        .pageSize(pageNode.get("ps").getInt())
+                        .total(pageNode.get("count").getInt())
+                        .build();
+            }
+
+            return new R<>(code, message, null, list, pageInfo, s);
+        } else {
+            //Json格式不正确
+            return new R<>(-1, null, null, null, null, s);
+        }
     }
 }
 
