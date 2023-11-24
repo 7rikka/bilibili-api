@@ -3,6 +3,7 @@ package nya.nekoneko.bilibili.client;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import nya.nekoneko.bilibili.core.BiliException;
 import nya.nekoneko.bilibili.core.BiliRequestFactor;
 import nya.nekoneko.bilibili.model.*;
 import nya.nekoneko.bilibili.model.enums.*;
@@ -540,6 +541,9 @@ public class BiliClient {
     }
 
     public R<BiliArchive> getMyArchiveList(Integer page, Integer pageSize, BiliArchiveStatusEnum status, String keyword, Integer tid, BiliArchiveOrderType orderType) {
+        if (null != pageSize && (pageSize <= 0 || pageSize > 50)) {
+            throw new BiliException("不正确的分页大小");
+        }
         //coop: 1
         //interactive: 1
         String s = BiliRequestFactor.getBiliRequest()
@@ -585,6 +589,7 @@ public class BiliClient {
                             .title(archive.get("title").getRawString())
                             .cover(archive.get("cover").getRawString())
                             .tag(archive.get("tag").getRawString())
+                            .duration(archive.get("duration").getInt())
                             .videos(videoList)
                             .build();
                     list.add(archive1);

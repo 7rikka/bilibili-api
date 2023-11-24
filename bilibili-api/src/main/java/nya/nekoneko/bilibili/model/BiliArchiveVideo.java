@@ -42,6 +42,11 @@ public class BiliArchiveVideo {
      *
      */
     private Integer index;
+    /**
+     * -2：
+     * -4：
+     * -16：
+     */
     private Integer status;
     private String statusDesc;
     private String rejectReason;
@@ -58,6 +63,11 @@ public class BiliArchiveVideo {
      */
     private Integer failCode;
     private String failDesc;
+    /**
+     * 1：
+     * 2：
+     * 6：
+     */
     private Integer xCodeState;
     private LocalDateTime ctime;
 }

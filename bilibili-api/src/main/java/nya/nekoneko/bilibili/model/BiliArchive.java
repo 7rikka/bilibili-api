@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -23,6 +24,7 @@ public class BiliArchive {
     private String title;
     private String cover;
     private String tag;
+    private Integer duration;
     /**
      * 稿件类型
      * 1：自制
@@ -39,6 +41,8 @@ public class BiliArchive {
      * 稿件简介
      */
     private String desc;
+    private Integer state;
+    private String stateDesc;
     /**
      * 转载来源
      */
@@ -47,6 +51,8 @@ public class BiliArchive {
      * 粉丝动态
      */
     private String dynamic;
+    private LocalDateTime ptime;
+    private LocalDateTime ctime;
     /**
      * 分p列表
      */
