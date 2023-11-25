@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static nya.nekoneko.bilibili.util.BiliUtil.checkBvid;
+import static nya.nekoneko.bilibili.util.JsonUtil.safeGetCode;
+import static nya.nekoneko.bilibili.util.JsonUtil.safeGetMessage;
 
 /**
  * @author Rikka
@@ -32,17 +34,22 @@ public class BiliClient {
     public BiliLoginCredential credential;
 
     /**
-     * 获取Web端扫码登录信息
+     * 获取Web端登录二维码
      *
      * @return
      */
-    public BiliLoginQrInfo getLoginQrCode() {
-        BiliResult result = BiliRequestFactor.getBiliRequest()
+    public R<BiliLoginQrInfo> getLoginQrCode() {
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://passport.bilibili.com/x/passport-login/web/qrcode/generate")
-                .addParam("source", "main-fe-header")
                 .buildRequest()
-                .doCall();
-        return new BiliLoginQrInfo(result.getData().get("url").getRawString(), result.getData().get("qrcode_key").getRawString());
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        ONode dataNode = node.get("data");
+        return new R<>(
+                safeGetCode(node),
+                safeGetMessage(node),
+                new BiliLoginQrInfo(dataNode.get("url").getString(), dataNode.get("qrcode_key").getString()),
+                result);
     }
 
     /**
@@ -51,23 +58,25 @@ public class BiliClient {
      * @param qrCodeKey 二维码Key
      * @return 扫描结果
      */
-    public BiliLoginQrScanResult getLoginQrScanResult(String qrCodeKey) {
-        BiliResult result = BiliRequestFactor.getBiliRequest()
+    public R<BiliLoginQrScanResult> getLoginQrScanResult(String qrCodeKey) {
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://passport.bilibili.com/x/passport-login/web/qrcode/poll")
                 .addParam("qrcode_key", qrCodeKey)
                 .addParam("source", "main-fe-header")
                 .buildRequest()
-                .doCall();
-        ONode data = result.getData();
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        ONode dataNode = node.get("data");
         //0：成功
         //86101：未扫码
         //86038：二维码已失效
         //86090：二维码已扫码未确认
-        int code = data.get("code").getInt();
-        String message = data.get("message").getString();
+        int code = dataNode.get("code").getInt();
+        String message = dataNode.get("message").getString();
+        BiliLoginQrScanResult r;
         if (0 == code) {
-            String url = data.get("url").getString();
-            String refreshToken = data.get("refresh_token").getString();
+            String url = dataNode.get("url").getString();
+            String refreshToken = dataNode.get("refresh_token").getString();
             BiliLoginCredential credential = BiliLoginCredential.builder()
                     .dedeUserId(UrlUtil.getParam(url, "DedeUserID"))
                     .dedeUserIdCkMd5(UrlUtil.getParam(url, "DedeUserID__ckMd5"))
@@ -76,16 +85,17 @@ public class BiliClient {
                     .biliJct(UrlUtil.getParam(url, "bili_jct"))
                     .refreshToken(refreshToken)
                     .build();
-            return new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.OK, message, credential);
+            r = new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.OK, message, credential);
         } else if (86101 == code) {
-            return new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.NO_SCAN, message, null);
+            r = new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.NO_SCAN, message, null);
         } else if (86038 == code) {
-            return new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.QR_EXPIRED, message, null);
+            r = new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.QR_EXPIRED, message, null);
         } else if (86090 == code) {
-            return new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.NO_CONFIRM, message, null);
+            r = new BiliLoginQrScanResult(BiliLoginQrScanResult.BiliLoginQrScanState.NO_CONFIRM, message, null);
         } else {
             throw new RuntimeException("Error Code: " + code);
         }
+        return new R<>(safeGetCode(node), safeGetMessage(node), r, result);
     }
 
     /**
@@ -94,15 +104,17 @@ public class BiliClient {
      * @param fns 分p的filename
      * @return 封面地址列表
      */
-    public List<String> getArchiveRecoverList(String fns) {
-        BiliResult result = BiliRequestFactor.getBiliRequest()
+    public R<List<String>> getArchiveRecoverList(String fns) {
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/recovers")
                 .addParam("fns", fns)
                 .get()
                 .cookie(credential)
                 .buildRequest()
-                .doCall();
-        return result.getData().toObjectList(String.class);
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        List<String> list = node.get("data").toObjectList(String.class);
+        return new R<>(safeGetCode(node), safeGetMessage(node), list, result);
     }
 
     private BiliArchive getArchiveDetail(Integer aid, String bvid) {
@@ -233,7 +245,7 @@ public class BiliClient {
         //稿件Tag 必填
         node.set("tag", archive.getTag());
         //启用未经作者授权 禁止转载? 0: 不启用 1: 启用
-        if (archive.isNoReprint()) {
+        if (archive.getNoReprint() == 1) {
             node.set("no_reprint", 1);
         }
         node.set("cover", archive.getCover());
@@ -364,7 +376,7 @@ public class BiliClient {
         ONode node = ONode.loadStr(s);
         ONode n = node.get("data");
         return BiliArchiveStat.builder()
-                .aid(n.get("aid").getInt())
+                .aid(n.get("aid").getLong())
                 .bvid(n.get("bvid").getString())
                 .view(n.get("view").getInt())
                 .danmaku(n.get("danmaku").getInt())
@@ -540,10 +552,28 @@ public class BiliClient {
         return node.get("data").toObjectList(BiliPartInfo.class);
     }
 
-    public R<BiliArchive> getMyArchiveList(Integer page, Integer pageSize, BiliArchiveStatusEnum status, String keyword, Integer tid, BiliArchiveOrderType orderType) {
+    /**
+     * 查询我的投稿列表
+     *
+     * @param page      页数（页数不得大于10000/分页大小，最多获取10000条）
+     * @param pageSize  分页大小（范围[1,50]）
+     * @param status    稿件状态
+     * @param keyword   搜索关键词
+     * @param tid       分区id
+     * @param orderType 排序方式（均为倒序排列）
+     * @return
+     */
+    public R<List<BiliArchive>> getMyArchiveList(Integer page, Integer pageSize, BiliArchiveStatusEnum status, String keyword, Integer tid, BiliArchiveOrderType orderType) {
         if (null != pageSize && (pageSize <= 0 || pageSize > 50)) {
             throw new BiliException("不正确的分页大小");
         }
+        if (null != pageSize) {
+            int maxPage = 10000 / pageSize;
+            if (page > maxPage) {
+                throw new BiliException("页数不得大于" + maxPage);
+            }
+        }
+
         //coop: 1
         //interactive: 1
         String s = BiliRequestFactor.getBiliRequest()
@@ -557,7 +587,7 @@ public class BiliClient {
                 .cookie(credential)
                 .buildRequest()
                 .doCallGetString();
-        System.out.println(s);
+//        System.out.println(s);
         List<BiliArchive> list = new ArrayList<>();
         ONode n = ONode.loadStr(s);
         if (n.exists("code")) {
@@ -588,10 +618,30 @@ public class BiliClient {
                             .tid(archive.get("tid").getInt())
                             .title(archive.get("title").getRawString())
                             .cover(archive.get("cover").getRawString())
+
+                            .rejectReason(archive.get("reject_reason").getRawString())
+                            .rejectReasonUrl(archive.get("reject_reason_url").getRawString())
+                            .modifyAdvise(archive.get("modify_advise").getRawString())
+                            .problemDescription(archive.get("problem_description").getRawString())
+                            .problemDescriptionTitle(archive.get("problem_description_title").getRawString())
+                            .rejectReasonId(archive.get("reject_reason_id").getInt())
+
+
                             .tag(archive.get("tag").getRawString())
                             .duration(archive.get("duration").getInt())
+                            .copyright(archive.get("copyright").getInt())
+                            .noReprint(archive.get("no_reprint").getInt())
+                            .desc(archive.get("desc").getRawString())
+                            .state(archive.get("state").getInt())
+                            .stateDesc(archive.get("state_desc").getRawString())
+                            .source(archive.get("source").getRawString())
+                            .descFormatId(archive.get("desc_format_id").getInt())
+                            .dynamic(archive.get("dynamic").getRawString())
+                            .ptime(TimeUtil.timestampToLocalDateTime(archive.get("ptime").getInt()))
+                            .ctime(TimeUtil.timestampToLocalDateTime(archive.get("ctime").getInt()))
                             .videos(videoList)
                             .build();
+
                     list.add(archive1);
                     ONode videos = v.get("Videos");
                     for (int j = 0; j < videos.count(); j++) {
@@ -618,9 +668,25 @@ public class BiliClient {
                                         .build());
 
                     }
-
+                    ONode statNode = v.get("stat");
+                    if (!statNode.isNull()) {
+                        archive1.setStat(BiliArchiveStat.builder()
+                                .aid(statNode.get("aid").getLong())
+                                .bvid(archive.get("bvid").getRawString())
+                                .view(statNode.get("view").getInt())
+                                .danmaku(statNode.get("danmaku").getInt())
+                                .reply(statNode.get("reply").getInt())
+                                .favorite(statNode.get("favorite").getInt())
+                                .coin(statNode.get("coin").getInt())
+                                .share(statNode.get("share").getInt())
+                                .like(statNode.get("like").getInt())
+                                .nowRank(statNode.get("now_rank").getInt())
+                                .hisRank(statNode.get("his_rank").getInt())
+                                .noReprint(archive.get("no_reprint").getInt())
+                                .copyright(archive.get("copyright").getInt())
+                                .build());
+                    }
                 }
-
             }
 
             //========
@@ -636,10 +702,10 @@ public class BiliClient {
                         .build();
             }
 
-            return new R<>(code, message, null, list, pageInfo, s);
+            return new R<>(code, message, list, pageInfo, s);
         } else {
             //Json格式不正确
-            return new R<>(-1, null, null, null, null, s);
+            return new R<>(-1, null, null, null, s);
         }
     }
 }

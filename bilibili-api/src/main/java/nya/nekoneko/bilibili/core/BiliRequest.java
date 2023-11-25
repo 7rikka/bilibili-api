@@ -3,6 +3,7 @@ package nya.nekoneko.bilibili.core;
 import nya.nekoneko.bilibili.model.BiliLoginCredential;
 import nya.nekoneko.bilibili.model.BiliResult;
 import okhttp3.*;
+import org.noear.snack.ONode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -224,6 +225,9 @@ public class BiliRequest {
      */
     public String doCallGetString() {
         return Call.doCallGetString(request);
+    }
+    public ONode doCallGetNode() {
+        return ONode.loadStr(Call.doCallGetString(request));
     }
 
     public BiliResult doCall() {

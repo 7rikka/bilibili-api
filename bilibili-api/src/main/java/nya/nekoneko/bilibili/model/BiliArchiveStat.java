@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BiliArchiveStat {
-    private Integer aid;
+    private Long aid;
     private String bvid;
     private Integer view;
     private Integer danmaku;

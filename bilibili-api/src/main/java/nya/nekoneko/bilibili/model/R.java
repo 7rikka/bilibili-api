@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * @author Ho
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,7 +18,13 @@ public class R<T> {
     private Integer code;
     private String message;
     private T result;
-    private List<T> list;
     private BiliPageInfo pageInfo;
     private String raw;
+
+    public R(Integer code, String message, T result, String raw) {
+        this.code = code;
+        this.message = message;
+        this.result = result;
+        this.raw = raw;
+    }
 }

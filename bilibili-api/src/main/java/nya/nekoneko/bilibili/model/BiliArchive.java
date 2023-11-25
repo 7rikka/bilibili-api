@@ -23,6 +23,15 @@ public class BiliArchive {
     private Integer tid;
     private String title;
     private String cover;
+    /**
+     *
+     */
+    private String rejectReason;
+    private String rejectReasonUrl;
+    private String modifyAdvise;
+    private String problemDescription;
+    private String problemDescriptionTitle;
+    private Integer rejectReasonId;
     private String tag;
     private Integer duration;
     /**
@@ -36,17 +45,23 @@ public class BiliArchive {
      * 0：不显示
      * 1：显示
      */
-    private boolean noReprint;
+    private Integer noReprint;
     /**
      * 稿件简介
      */
     private String desc;
+    /**
+     * -2：已退回
+     * -4：已锁定
+     * -16：转码失败
+     */
     private Integer state;
     private String stateDesc;
     /**
      * 转载来源
      */
     private String source;
+    private Integer descFormatId;
     /**
      * 粉丝动态
      */
@@ -57,9 +72,6 @@ public class BiliArchive {
      * 分p列表
      */
     private List<BiliArchiveVideo> videos;
-    /**
-     *
-     */
-//    private String reject_reason;
-//    private String reject_reason_url;
+    private BiliArchiveStat stat;
+
 }
