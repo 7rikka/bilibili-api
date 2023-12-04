@@ -14,7 +14,9 @@ import org.noear.snack.ONode;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.StringJoiner;
 
 import static nya.nekoneko.bilibili.util.BiliUtil.checkBvid;
 import static nya.nekoneko.bilibili.util.JsonUtil.safeGetCode;
@@ -102,84 +104,101 @@ public class BiliClient {
      * 获取分p的封面列表
      *
      * @param fns 分p的filename
-     * @return 封面地址列表
+     * @return 封面地址列表，最多9条
      */
-    public R<List<String>> getArchiveRecoverList(String fns) {
+    public R<List<String>> getArchiveRecoverList(String... fns) {
+        StringJoiner fnsString = new StringJoiner(",");
+        Arrays.stream(fns).forEach(fnsString::add);
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/recovers")
-                .addParam("fns", fns)
+                .addParam("fns", fnsString.toString())
                 .get()
                 .cookie(credential)
                 .buildRequest()
                 .doCallGetString();
         ONode node = ONode.loadStr(result);
-        List<String> list = node.get("data").toObjectList(String.class);
-        return new R<>(safeGetCode(node), safeGetMessage(node), list, result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            List<String> list = node.get("data").toObjectList(String.class);
+            return new R<>(code, message, list, result);
+        } else {
+            return new R<>(code, message, null, result);
+        }
+
     }
 
     private BiliArchive getArchiveDetail(Integer aid, String bvid) {
-        BiliResult result = BiliRequestFactor.getBiliRequest()
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/view")
                 .addParam("aid", aid)
                 .addParam("bvid", bvid)
                 .get()
                 .cookie(credential)
                 .buildRequest()
-                .doCall();
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
         System.out.println(result);
-        ONode data = result.getData();
-        ONode archive = data.get("archive");
-        BiliArchive.builder()
-                .aid(archive.get("aid").getInt())
-                .bvid(archive.get("bvid").getString())
-                .build();
-        ONode videosNode = data.get("videos");
-        videosNode.forEach(n -> {
-            BiliArchiveVideo.builder()
-                    .title(n.get("title").getString())
-                    .filename(n.get("filename").getString())
-                    .cid(n.get("cid").getInt())
-                    .duration(n.get("duration").getInt())
-                    .index(n.get("index").getInt())
-                    .status(n.get("status").getInt())
-                    .statusDesc(n.get("status_desc").getString())
-                    .rejectReason(n.get("reject_reason").getString())
-                    .rejectReasonUrl(n.get("reject_reason_url").getString())
-                    .failCode(n.get("fail_code").getInt())
-                    .failDesc(n.get("fail_desc").getString())
-                    .xCodeState(n.get("xcode_state").getInt())
-                    .ctime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
+        if (0 == code) {
+            ONode data = node.get("data");
+            ONode archive = data.get("archive");
+            BiliArchive.builder()
+                    .aid(archive.get("aid").getInt())
+                    .bvid(archive.get("bvid").getString())
                     .build();
+            ONode videosNode = data.get("videos");
+            videosNode.forEach(n -> {
+                BiliArchiveVideo.builder()
+                        .title(n.get("title").getString())
+                        .filename(n.get("filename").getString())
+                        .cid(n.get("cid").getInt())
+                        .duration(n.get("duration").getInt())
+                        .index(n.get("index").getInt())
+                        .status(n.get("status").getInt())
+                        .statusDesc(n.get("status_desc").getString())
+                        .rejectReason(n.get("reject_reason").getString())
+                        .rejectReasonUrl(n.get("reject_reason_url").getString())
+                        .failCode(n.get("fail_code").getInt())
+                        .failDesc(n.get("fail_desc").getString())
+                        .xCodeState(n.get("xcode_state").getInt())
+                        .ctime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
+                        .build();
 
 
-            //fail_code
-            //0 正常
-            //1
-            //2
-            //6
-            //9
-            //11
-            //14
-            //15
-            //16
+                //fail_code
+                //0 正常
+                //1
+                //2
+                //6
+                //9
+                //11
+                //14
+                //15
+                //16
 
-            //xcode_state
-            //0
-            //1
-            //2
-            //3
-            //6
+                //xcode_state
+                //0
+                //1
+                //2
+                //3
+                //6
 
-            //status
-            //-100      已删除
-            //-30
-            //-16
-            //-4        撞车
-            //-2
-            //-1
-            //0
-            //10000
-        });
+                //status
+                //-100      已删除
+                //-30
+                //-16
+                //-4        撞车
+                //-2
+                //-1
+                //0
+                //10000
+            });
+        } else {
+
+        }
+
         return null;
     }
 
@@ -362,45 +381,45 @@ public class BiliClient {
 //                .mtime(TimeUtil.stringToLocalDateTime(d.get("mtime").getString()))
 //                .build();
 //    }
-    @Deprecated
-    private BiliArchiveStat getArchiveStat(Integer aid, String bvid) {
-        if (null != bvid) {
-            checkBvid(bvid);
-        }
-        String s = BiliRequestFactor.getBiliRequest()
-                .url("https://api.bilibili.com/x/web-interface/archive/stat")
-                .addParam("aid", aid)
-                .addParam("bvid", bvid)
-                .buildRequest()
-                .doCallGetString();
-        ONode node = ONode.loadStr(s);
-        ONode n = node.get("data");
-        return BiliArchiveStat.builder()
-                .aid(n.get("aid").getLong())
-                .bvid(n.get("bvid").getString())
-                .view(n.get("view").getInt())
-                .danmaku(n.get("danmaku").getInt())
-                .reply(n.get("reply").getInt())
-                .favorite(n.get("favorite").getInt())
-                .coin(n.get("coin").getInt())
-                .share(n.get("share").getInt())
-                .like(n.get("like").getInt())
-                .nowRank(n.get("now_rank").getInt())
-                .hisRank(n.get("his_rank").getInt())
-                .noReprint(n.get("no_reprint").getInt())
-                .copyright(n.get("copyright").getInt())
-                .build();
-    }
-
-    @Deprecated
-    public BiliArchiveStat getArchiveStat(Integer aid) {
-        return getArchiveStat(aid, null);
-    }
-
-    @Deprecated
-    public BiliArchiveStat getArchiveStat(String bvid) {
-        return getArchiveStat(null, bvid);
-    }
+//    @Deprecated
+//    private BiliArchiveStat getArchiveStat(Integer aid, String bvid) {
+//        if (null != bvid) {
+//            checkBvid(bvid);
+//        }
+//        String s = BiliRequestFactor.getBiliRequest()
+//                .url("https://api.bilibili.com/x/web-interface/archive/stat")
+//                .addParam("aid", aid)
+//                .addParam("bvid", bvid)
+//                .buildRequest()
+//                .doCallGetString();
+//        ONode node = ONode.loadStr(s);
+//        ONode n = node.get("data");
+//        return BiliArchiveStat.builder()
+//                .aid(n.get("aid").getLong())
+//                .bvid(n.get("bvid").getString())
+//                .view(n.get("view").getInt())
+//                .danmaku(n.get("danmaku").getInt())
+//                .reply(n.get("reply").getInt())
+//                .favorite(n.get("favorite").getInt())
+//                .coin(n.get("coin").getInt())
+//                .share(n.get("share").getInt())
+//                .like(n.get("like").getInt())
+//                .nowRank(n.get("now_rank").getInt())
+//                .hisRank(n.get("his_rank").getInt())
+//                .noReprint(n.get("no_reprint").getInt())
+//                .copyright(n.get("copyright").getInt())
+//                .build();
+//    }
+//
+//    @Deprecated
+//    public BiliArchiveStat getArchiveStat(Integer aid) {
+//        return getArchiveStat(aid, null);
+//    }
+//
+//    @Deprecated
+//    public BiliArchiveStat getArchiveStat(String bvid) {
+//        return getArchiveStat(null, bvid);
+//    }
 
     /**
      * 获取分p播放地址
@@ -409,7 +428,7 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    public BiliArchivePlayUrlInfo getArchivePlayUrlInfo(Integer aid, Integer cid) {
+    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Integer aid, Integer cid) {
         return getArchivePlayUrlInfo(aid, null, cid);
     }
 
@@ -420,7 +439,7 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    public BiliArchivePlayUrlInfo getArchivePlayUrlInfo(String bvid, Integer cid) {
+    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(String bvid, Integer cid) {
         return getArchivePlayUrlInfo(null, bvid, cid);
     }
 
@@ -432,8 +451,8 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    private BiliArchivePlayUrlInfo getArchivePlayUrlInfo(Integer aid, String bvid, Integer cid) {
-        String s = BiliRequestFactor.getBiliRequest()
+    private R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Integer aid, String bvid, Integer cid) {
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/player/wbi/playurl")
                 .addParam("avid", aid)
                 .addParam("bvid", bvid)
@@ -444,73 +463,79 @@ public class BiliClient {
                 .cookie(credential)
                 .buildRequest()
                 .doCallGetString();
-        System.out.println(s);
-        ONode data = ONode.loadStr(s).get("data");
-        List<BiliVideoQuality> list = new ArrayList<>();
-        for (int i = 0; i < data.get("accept_quality").count(); i++) {
-            list.add(BiliVideoQuality.of(data.get("accept_quality").get(i).getInt()));
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            ONode data = node.get("data");
+            List<BiliVideoQuality> list = new ArrayList<>();
+            for (int i = 0; i < data.get("accept_quality").count(); i++) {
+                list.add(BiliVideoQuality.of(data.get("accept_quality").get(i).getInt()));
+            }
+            //视频流
+            ONode dash = data.get("dash");
+            ONode video = dash.get("video");
+            List<BiliArchiveUrlInfoVideo> videoList = new ArrayList<>();
+            for (int i = 0; i < video.count(); i++) {
+                ONode v = video.get(i);
+                List<String> backupUrl = v.get("backup_url").toObjectList(String.class);
+                backupUrl.add(0, v.get("base_url").getString());
+                videoList.add(BiliArchiveUrlInfoVideo.builder()
+                        .quality(BiliVideoQuality.of(v.get("id").getInt()))
+                        .urlList(backupUrl)
+                        .width(v.get("width").getInt())
+                        .height(v.get("height").getInt())
+                        .frameRate(v.get("frame_rate").getString())
+                        .codec(BiliVideoCodec.of(v.get("codecid").getInt()))
+                        .build());
+            }
+            //音频流
+            List<BiliArchiveUrlInfoAudio> audioList = new ArrayList<>();
+            ONode audio = dash.get("audio");
+            for (int i = 0; i < audio.count(); i++) {
+                ONode a = audio.get(i);
+                List<String> backupUrl = a.get("backup_url").toObjectList(String.class);
+                backupUrl.add(0, a.get("base_url").getString());
+                audioList.add(BiliArchiveUrlInfoAudio.builder()
+                        .quality(BiliAudioQuality.of(a.get("id").getInt()))
+                        .urlList(backupUrl)
+                        .build());
+            }
+            //杜比全景声
+            ONode dolby = dash.get("dolby");
+            ONode dolbyAudio = dolby.get("audio");
+            for (int i = 0; i < dolbyAudio.count(); i++) {
+                ONode db = dolbyAudio.get(i);
+                List<String> backupUrl = db.get("backup_url").toObjectList(String.class);
+                backupUrl.add(0, db.get("base_url").getString());
+                audioList.add(BiliArchiveUrlInfoAudio.builder()
+                        .quality(BiliAudioQuality.of(db.get("id").getInt()))
+                        .urlList(backupUrl)
+                        .build());
+            }
+            //无损音轨
+            ONode flac = dash.get("flac");
+            if (!flac.get("audio").isNull()) {
+                ONode flacAudio = flac.get("audio");
+                List<String> backupUrl = flacAudio.get("backup_url").toObjectList(String.class);
+                backupUrl.add(0, flacAudio.get("base_url").getString());
+                audioList.add(BiliArchiveUrlInfoAudio.builder()
+                        .quality(BiliAudioQuality.of(flacAudio.get("id").getInt()))
+                        .urlList(backupUrl)
+                        .build());
+            }
+            //排序
+            audioList.sort((o1, o2) -> o2.getQuality().getCode() - o1.getQuality().getCode());
+            return new R<>(code, message, BiliArchivePlayUrlInfo.builder()
+                    .currentQuality(BiliVideoQuality.of(data.get("quality").getInt()))
+                    .length(data.get("timelength").getInt())
+                    .acceptQuality(list)
+                    .videoList(videoList)
+                    .audioList(audioList)
+                    .build(), result);
+        } else {
+            return new R<>(code, message, null, result);
         }
-        //视频流
-        ONode dash = data.get("dash");
-        ONode video = dash.get("video");
-        List<BiliArchiveUrlInfoVideo> videoList = new ArrayList<>();
-        for (int i = 0; i < video.count(); i++) {
-            ONode v = video.get(i);
-            List<String> backupUrl = v.get("backup_url").toObjectList(String.class);
-            backupUrl.add(0, v.get("base_url").getString());
-            videoList.add(BiliArchiveUrlInfoVideo.builder()
-                    .quality(BiliVideoQuality.of(v.get("id").getInt()))
-                    .urlList(backupUrl)
-                    .width(v.get("width").getInt())
-                    .height(v.get("height").getInt())
-                    .frameRate(v.get("frame_rate").getString())
-                    .codec(BiliVideoCodec.of(v.get("codecid").getInt()))
-                    .build());
-        }
-        //音频流
-        List<BiliArchiveUrlInfoAudio> audioList = new ArrayList<>();
-        ONode audio = dash.get("audio");
-        for (int i = 0; i < audio.count(); i++) {
-            ONode a = audio.get(i);
-            List<String> backupUrl = a.get("backup_url").toObjectList(String.class);
-            backupUrl.add(0, a.get("base_url").getString());
-            audioList.add(BiliArchiveUrlInfoAudio.builder()
-                    .quality(BiliAudioQuality.of(a.get("id").getInt()))
-                    .urlList(backupUrl)
-                    .build());
-        }
-        //杜比全景声
-        ONode dolby = dash.get("dolby");
-        ONode dolbyAudio = dolby.get("audio");
-        for (int i = 0; i < dolbyAudio.count(); i++) {
-            ONode db = dolbyAudio.get(i);
-            List<String> backupUrl = db.get("backup_url").toObjectList(String.class);
-            backupUrl.add(0, db.get("base_url").getString());
-            audioList.add(BiliArchiveUrlInfoAudio.builder()
-                    .quality(BiliAudioQuality.of(db.get("id").getInt()))
-                    .urlList(backupUrl)
-                    .build());
-        }
-        //无损音轨
-        ONode flac = dash.get("flac");
-        if (!flac.get("audio").isNull()) {
-            ONode flacAudio = flac.get("audio");
-            List<String> backupUrl = flacAudio.get("backup_url").toObjectList(String.class);
-            backupUrl.add(0, flacAudio.get("base_url").getString());
-            audioList.add(BiliArchiveUrlInfoAudio.builder()
-                    .quality(BiliAudioQuality.of(flacAudio.get("id").getInt()))
-                    .urlList(backupUrl)
-                    .build());
-        }
-        //排序
-        audioList.sort((o1, o2) -> o2.getQuality().getCode() - o1.getQuality().getCode());
-        return BiliArchivePlayUrlInfo.builder()
-                .currentQuality(BiliVideoQuality.of(data.get("quality").getInt()))
-                .length(data.get("timelength").getInt())
-                .acceptQuality(list)
-                .videoList(videoList)
-                .audioList(audioList)
-                .build();
     }
 
     /**
@@ -519,7 +544,7 @@ public class BiliClient {
      * @param aid
      * @return
      */
-    public List<BiliPartInfo> getPartList(Integer aid) {
+    public R<List<BiliPartInfo>> getPartList(Integer aid) {
         return getPartList(aid, null);
     }
 
@@ -529,7 +554,7 @@ public class BiliClient {
      * @param bvid
      * @return
      */
-    public List<BiliPartInfo> getPartList(String bvid) {
+    public R<List<BiliPartInfo>> getPartList(String bvid) {
         return getPartList(null, bvid);
     }
 
@@ -540,16 +565,22 @@ public class BiliClient {
      * @param bvid
      * @return
      */
-    private List<BiliPartInfo> getPartList(Integer aid, String bvid) {
-        String s = BiliRequestFactor.getBiliRequest()
+    private R<List<BiliPartInfo>> getPartList(Integer aid, String bvid) {
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/player/pagelist")
                 .addParam("aid", aid)
                 .addParam("bvid", bvid)
                 .cookie(credential)
                 .buildRequest()
                 .doCallGetString();
-        ONode node = ONode.loadStr(s);
-        return node.get("data").toObjectList(BiliPartInfo.class);
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            return new R<>(code, message, node.get("data").toObjectList(BiliPartInfo.class), result);
+        }else {
+            return new R<>(code, message, null, result);
+        }
     }
 
     /**
@@ -576,7 +607,7 @@ public class BiliClient {
 
         //coop: 1
         //interactive: 1
-        String s = BiliRequestFactor.getBiliRequest()
+        String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/web/archives")
                 .addParam("status", status.getValue())
                 .addParam("pn", page)
@@ -587,13 +618,13 @@ public class BiliClient {
                 .cookie(credential)
                 .buildRequest()
                 .doCallGetString();
-//        System.out.println(s);
-        List<BiliArchive> list = new ArrayList<>();
-        ONode n = ONode.loadStr(s);
-        if (n.exists("code")) {
-            int code = n.get("code").getInt();
-            String message = n.get("message").getRawString();
-            ONode data = n.get("data");
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+
+        if (0 == code) {
+            List<BiliArchive> list = new ArrayList<>();
+            ONode data = node.get("data");
             ONode archiveListNode = data.get("arc_audits");
             if (!archiveListNode.isNull()) {
                 //遍历每个视频
@@ -688,7 +719,6 @@ public class BiliClient {
                     }
                 }
             }
-
             //========
             //分页信息
             //========
@@ -701,11 +731,10 @@ public class BiliClient {
                         .total(pageNode.get("count").getInt())
                         .build();
             }
-
-            return new R<>(code, message, list, pageInfo, s);
+            return new R<>(code, message, list, pageInfo, result);
         } else {
             //Json格式不正确
-            return new R<>(-1, null, null, null, s);
+            return new R<>(code, message, null, result);
         }
     }
 }
