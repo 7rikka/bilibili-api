@@ -2,6 +2,11 @@ package nya.nekoneko.bilibili.util;
 
 import org.noear.snack.ONode;
 
+/**
+ * Json处理工具类
+ *
+ * @author Rikka
+ */
 public class JsonUtil {
     public static Integer safeGetInt(ONode node, String key) {
         return node.get(key).isNull() ? null : node.get(key).getInt();
