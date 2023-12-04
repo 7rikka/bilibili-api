@@ -128,7 +128,7 @@ public class BiliClient {
 
     }
 
-    private BiliArchive getArchiveDetail(Integer aid, String bvid) {
+    private R<BiliArchive> getArchiveDetail(Integer aid, String bvid) {
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/view")
                 .addParam("aid", aid)
@@ -143,14 +143,36 @@ public class BiliClient {
         System.out.println(result);
         if (0 == code) {
             ONode data = node.get("data");
+            //archive
             ONode archive = data.get("archive");
-            BiliArchive.builder()
-                    .aid(archive.get("aid").getInt())
+            List<BiliArchiveVideo> videoList = new ArrayList<>();
+            BiliArchive archive1 = BiliArchive.builder()
+                    .aid(archive.get("aid").getLong())
                     .bvid(archive.get("bvid").getString())
+                    .tid(archive.get("tid").getInt())
+                    .title(archive.get("title").getString())
+                    .cover(archive.get("cover").getString())
+                    .rejectReason(archive.get("reject_reason").getString())
+                    .rejectReasonUrl(archive.get("reject_reason_url").getString())
+                    .tag(archive.get("tag").getString())
+                    .duration(archive.get("duration").getInt())
+                    .copyright(archive.get("copyright").getInt())
+                    .noReprint(archive.get("no_reprint").getInt())
+                    .desc(archive.get("desc").getString())
+                    .state(archive.get("state").getInt())
+                    .stateDesc(archive.get("state_desc").getString())
+                    .source(archive.get("source").getString())
+                    .descFormatId(archive.get("desc_format_id").getInt())
+                    .dynamic(archive.get("dynamic").getRawString())
+                    .ptime(TimeUtil.timestampToLocalDateTime(archive.get("ptime").getInt()))
+                    .ctime(TimeUtil.timestampToLocalDateTime(archive.get("ctime").getInt()))
+                    .videos(videoList)
                     .build();
+
+            //videos
             ONode videosNode = data.get("videos");
             videosNode.forEach(n -> {
-                BiliArchiveVideo.builder()
+                videoList.add(BiliArchiveVideo.builder()
                         .title(n.get("title").getString())
                         .filename(n.get("filename").getString())
                         .cid(n.get("cid").getInt())
@@ -164,7 +186,8 @@ public class BiliClient {
                         .failDesc(n.get("fail_desc").getString())
                         .xCodeState(n.get("xcode_state").getInt())
                         .ctime(TimeUtil.timestampToLocalDateTime(n.get("ctime").getInt()))
-                        .build();
+                        .build());
+
 
 
                 //fail_code
@@ -195,18 +218,17 @@ public class BiliClient {
                 //0
                 //10000
             });
+            return new R<>(code, message, null, result);
         } else {
-
+            return new R<>(code, message, null, result);
         }
-
-        return null;
     }
 
-    public BiliArchive getArchiveDetail(Integer aid) {
+    public R<BiliArchive> getArchiveDetail(Integer aid) {
         return getArchiveDetail(aid, null);
     }
 
-    public BiliArchive getArchiveDetail(String bvid) {
+    public R<BiliArchive> getArchiveDetail(String bvid) {
         return getArchiveDetail(null, bvid);
     }
 
@@ -578,7 +600,7 @@ public class BiliClient {
         String message = safeGetMessage(node);
         if (0 == code) {
             return new R<>(code, message, node.get("data").toObjectList(BiliPartInfo.class), result);
-        }else {
+        } else {
             return new R<>(code, message, null, result);
         }
     }
@@ -644,7 +666,7 @@ public class BiliClient {
 //                    System.out.println("========================");
                     List<BiliArchiveVideo> videoList = new ArrayList<>();
                     BiliArchive archive1 = BiliArchive.builder()
-                            .aid(archive.get("aid").getInt())
+                            .aid(archive.get("aid").getLong())
                             .bvid(archive.get("bvid").getRawString())
                             .tid(archive.get("tid").getInt())
                             .title(archive.get("title").getRawString())
@@ -735,6 +757,45 @@ public class BiliClient {
         } else {
             //Json格式不正确
             return new R<>(code, message, null, result);
+        }
+    }
+
+    public void getPrivateMessage(Long talkerId, Integer pageSize, Long maxSeqNo, Long minSeqNo) {
+        if (null != pageSize) {
+            if (pageSize < 1 || pageSize > 200) {
+                throw new BiliException("分页大小取值范围：[1,200]");
+            }
+        }
+        //
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://api.vc.bilibili.com/svr_sync/v1/svr_sync/fetch_session_msgs")
+                .addParam("talker_id", talkerId)
+                .addParam("session_type", 1)
+                .addParam("size", pageSize)
+                .addParam("mobi_app", "web")
+                .addParam("end_seqno", maxSeqNo)
+                .addParam("begin_seqno", minSeqNo)
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+//        System.out.println(result);
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            ONode data = node.get("data");
+            ONode messages = data.get("messages");
+            for (int i = 0; i < messages.count(); i++) {
+                ONode oNode = messages.get(i).get("msg_type");
+
+                System.out.println(oNode.toJson());
+            }
+//            System.out.println(messages.count());
+//            ONode oNode = data.get("has_more");
+//            ONode oNode = data.get("min_seqno");
+//            ONode oNode = data.get("max_seqno");
+        } else {
+
         }
     }
 }

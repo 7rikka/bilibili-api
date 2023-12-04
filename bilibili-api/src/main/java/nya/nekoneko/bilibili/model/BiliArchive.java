@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BiliArchive {
-    private Integer aid;
+    private Long aid;
     private String bvid;
     private Integer tid;
     private String title;
