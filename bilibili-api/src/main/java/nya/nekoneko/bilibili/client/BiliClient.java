@@ -18,7 +18,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
 
-import static nya.nekoneko.bilibili.util.BiliUtil.checkBvid;
 import static nya.nekoneko.bilibili.util.JsonUtil.safeGetCode;
 import static nya.nekoneko.bilibili.util.JsonUtil.safeGetMessage;
 
@@ -218,7 +217,7 @@ public class BiliClient {
                 //0
                 //10000
             });
-            return new R<>(code, message, null, result);
+            return new R<>(code, message, archive1, result);
         } else {
             return new R<>(code, message, null, result);
         }
@@ -362,6 +361,41 @@ public class BiliClient {
         submitArchive(archive, null);
     }
 
+    /**
+     * 编辑稿件
+     * @param archive
+     */
+    public void editArchiveWeb(BiliArchive archive) {
+        ONode n = ONode.newObject();
+        n.set("aid", archive.getAid());
+        n.set("title", archive.getTitle());
+        n.set("cover", archive.getCover());
+        n.set("source", archive.getSource());
+        n.set("desc_format_id", archive.getDescFormatId());
+        n.set("tag", archive.getTag());
+        n.set("desc", archive.getDesc());
+        n.set("tid", archive.getTid());
+        n.set("copyright", archive.getCopyright());
+        n.set("dynamic", archive.getDynamic());
+        ONode list = ONode.newArray();
+        archive.getVideos().forEach(video -> {
+            ONode v = ONode.newObject();
+            v.set("filename", video.getFilename());
+            v.set("title", video.getTitle());
+            v.set("cid", video.getCid());
+            list.addNode(v);
+        });
+        n.setNode("videos", list);
+        System.out.println("提交Json："+n.toString());
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://member.bilibili.com/x/vu/web/edit")
+                .addParam("csrf", credential.getBiliJct())
+                .postJson(n.toString())
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        System.out.println(result);
+    }
     /**
      * 获取个人水印配置
      *
