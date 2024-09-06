@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static nya.nekoneko.bilibili.util.AppUtil.getSign;
+
 
 /**
  * 包装一次请求
@@ -87,7 +89,11 @@ public class BiliRequest {
         builder.get();
         return this;
     }
-
+    public BiliRequest post() {
+        RequestBody body = RequestBody.create("{}", JSON);
+        builder.post(body);
+        return this;
+    }
     /**
      * 提交Json
      *
@@ -170,22 +176,22 @@ public class BiliRequest {
         return this;
     }
 
-//    /**
-//     * APP用
-//     *
-//     * @param loginInfo
-//     * @return
-//     */
-//    public BiliRequest appSign(BilibiliLoginInfo loginInfo) {
-//        if (null != loginInfo) {
+    /**
+     * APP用
+     *
+     * @param credential
+     * @return
+     */
+    public BiliRequest appSign(BiliLoginCredential credential,String appSec) {
+        if (null != credential) {
 //            if (null != loginInfo.getAccessKey()) {
 //                addParam("access_key", loginInfo.getAccessKey());
 //            }
-//            String sign = getSign(paramMap, "560c52ccd288fed045859ed18bffd973");
-//            addParam("sign", sign);
-//        }
-//        return this;
-//    }
+        }
+        String sign = getSign(paramMap, appSec);
+        addParam("sign", sign);
+        return this;
+    }
 
     //    public BiliRequest appSign(BilibiliLoginInfo loginInfo, String appSecret) {
 //        if (null != loginInfo) {
@@ -233,6 +239,10 @@ public class BiliRequest {
     public BiliResult doCall() {
 //        System.out.println(request);
         return Call.doCall(request);
+    }
+    public Response doCallGetResponse() {
+//        System.out.println(request);
+        return Call.doCallGetResponse(request);
     }
     public InputStream doCallGetInputStream(){
         return Call.doCallGetInputStream(request);

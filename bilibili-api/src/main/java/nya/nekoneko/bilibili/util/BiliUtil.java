@@ -74,12 +74,12 @@ public class BiliUtil {
      */
     public static void checkBvid(String bvid) {
         if (null == bvid
-            || !bvid.startsWith("BV")
-            || bvid.charAt(2) != '1'
-            || bvid.charAt(5) != '4'
-            || (bvid.charAt(6) != '1' && bvid.charAt(6) != 'y')
-            || bvid.charAt(7) != '1'
-            || bvid.charAt(9) != '7'
+                || !bvid.startsWith("BV")
+                || bvid.charAt(2) != '1'
+                || bvid.charAt(5) != '4'
+                || (bvid.charAt(6) != '1' && bvid.charAt(6) != 'y')
+                || bvid.charAt(7) != '1'
+                || bvid.charAt(9) != '7'
         ) {
             throw new RuntimeException("bvid格式不正确：" + bvid);
         }
@@ -131,5 +131,14 @@ public class BiliUtil {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 获取当前秒级时间戳
+     *
+     * @return
+     */
+    public static String getTs() {
+        return String.valueOf(System.currentTimeMillis() / 1000);
     }
 }

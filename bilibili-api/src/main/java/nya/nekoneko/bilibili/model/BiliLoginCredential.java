@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 登录信息
  *
@@ -17,8 +19,9 @@ import lombok.NoArgsConstructor;
 public class BiliLoginCredential {
     private String dedeUserId;
     private String dedeUserIdCkMd5;
-    private String expires;
+    private LocalDateTime expires;
     private String sessData;
     private String biliJct;
+    private String accessToken;
     private String refreshToken;
 }

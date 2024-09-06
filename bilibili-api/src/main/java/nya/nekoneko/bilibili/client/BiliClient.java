@@ -1,5 +1,6 @@
 package nya.nekoneko.bilibili.client;
 
+import cn.hutool.core.util.StrUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,13 +12,16 @@ import nya.nekoneko.bilibili.util.TimeUtil;
 import nya.nekoneko.bilibili.util.UrlUtil;
 import org.noear.snack.ONode;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.StringJoiner;
 
+import static nya.nekoneko.bilibili.util.BiliUtil.getTs;
 import static nya.nekoneko.bilibili.util.JsonUtil.safeGetCode;
 import static nya.nekoneko.bilibili.util.JsonUtil.safeGetMessage;
 
@@ -33,6 +37,9 @@ public class BiliClient {
      * 登录凭证
      */
     public BiliLoginCredential credential;
+
+    private String appKey;
+    private String appSec;
 
     /**
      * 获取Web端登录二维码
@@ -81,7 +88,7 @@ public class BiliClient {
             BiliLoginCredential credential = BiliLoginCredential.builder()
                     .dedeUserId(UrlUtil.getParam(url, "DedeUserID"))
                     .dedeUserIdCkMd5(UrlUtil.getParam(url, "DedeUserID__ckMd5"))
-                    .expires(UrlUtil.getParam(url, "Expires"))
+                    .expires(LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(UrlUtil.getParam(url, "Expires"))), ZoneId.systemDefault()))
                     .sessData(UrlUtil.getParam(url, "SESSDATA"))
                     .biliJct(UrlUtil.getParam(url, "bili_jct"))
                     .refreshToken(refreshToken)
@@ -127,7 +134,7 @@ public class BiliClient {
 
     }
 
-    private R<BiliArchive> getArchiveDetail(Integer aid, String bvid) {
+    private R<BiliArchive> getArchiveDetail(Long aid, String bvid) {
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vupre/web/archive/view")
                 .addParam("aid", aid)
@@ -188,7 +195,6 @@ public class BiliClient {
                         .build());
 
 
-
                 //fail_code
                 //0 正常
                 //1
@@ -223,7 +229,7 @@ public class BiliClient {
         }
     }
 
-    public R<BiliArchive> getArchiveDetail(Integer aid) {
+    public R<BiliArchive> getArchiveDetail(Long aid) {
         return getArchiveDetail(aid, null);
     }
 
@@ -363,6 +369,7 @@ public class BiliClient {
 
     /**
      * 编辑稿件
+     *
      * @param archive
      */
     public void editArchiveWeb(BiliArchive archive) {
@@ -386,7 +393,7 @@ public class BiliClient {
             list.addNode(v);
         });
         n.setNode("videos", list);
-        System.out.println("提交Json："+n.toString());
+        System.out.println("提交Json：" + n.toString());
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://member.bilibili.com/x/vu/web/edit")
                 .addParam("csrf", credential.getBiliJct())
@@ -484,7 +491,7 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Integer aid, Integer cid) {
+    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Long aid, Long cid) {
         return getArchivePlayUrlInfo(aid, null, cid);
     }
 
@@ -495,7 +502,7 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(String bvid, Integer cid) {
+    public R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(String bvid, Long cid) {
         return getArchivePlayUrlInfo(null, bvid, cid);
     }
 
@@ -507,7 +514,7 @@ public class BiliClient {
      * @param cid
      * @return
      */
-    private R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Integer aid, String bvid, Integer cid) {
+    private R<BiliArchivePlayUrlInfo> getArchivePlayUrlInfo(Long aid, String bvid, Long cid) {
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/player/wbi/playurl")
                 .addParam("avid", aid)
@@ -600,7 +607,7 @@ public class BiliClient {
      * @param aid
      * @return
      */
-    public R<List<BiliPartInfo>> getPartList(Integer aid) {
+    public R<List<BiliPartInfo>> getPartList(Long aid) {
         return getPartList(aid, null);
     }
 
@@ -621,7 +628,7 @@ public class BiliClient {
      * @param bvid
      * @return
      */
-    private R<List<BiliPartInfo>> getPartList(Integer aid, String bvid) {
+    private R<List<BiliPartInfo>> getPartList(Long aid, String bvid) {
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://api.bilibili.com/x/player/pagelist")
                 .addParam("aid", aid)
@@ -830,6 +837,82 @@ public class BiliClient {
 //            ONode oNode = data.get("max_seqno");
         } else {
 
+        }
+    }
+
+    /**
+     * @param cid 电话区号
+     * @param tel 电话号码
+     * @return 验证码key
+     */
+    public R<String> sendLoginSms(String cid, String tel) {
+        if (StrUtil.hasBlank(appKey, appSec)) {
+            throw new RuntimeException("未设置AppKey或AppSecret");
+        }
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://passport.bilibili.com/x/passport-login/sms/send")
+                .addParam("appkey", "1d8b6e7d45233436")
+                .addParam("cid", cid)
+                .addParam("tel", tel)
+                .addParam("ts", getTs())
+                .post()
+                .appSign(credential, appSec)
+                .buildRequest()
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            String captchaKey = node.get("data").get("captcha_key").getString();
+            return new R<>(code, message, captchaKey, result);
+        } else {
+            return new R<>(code, message, null, result);
+        }
+    }
+
+    /**
+     * 使用短信验证码登录
+     *
+     * @param cid        电话区号
+     * @param tel        电话号码
+     * @param captchaKey 验证码key
+     * @param smsCode    验证码code
+     * @return 登录凭证
+     */
+    public R<BiliLoginCredential> loginSms(String cid, String tel, String captchaKey, String smsCode) {
+        if (StrUtil.hasBlank(appKey, appSec)) {
+            throw new RuntimeException("未设置AppKey或AppSecret");
+        }
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://passport.bilibili.com/x/passport-login/login/sms")
+                .addParam("appkey", appKey)
+                .addParam("captcha_key", captchaKey)
+                .addParam("cid", cid)
+                .addParam("code", smsCode)
+                .addParam("tel", tel)
+                .addParam("ts", getTs())
+                .post()
+                .appSign(credential, appSec)
+                .buildRequest()
+                .doCallGetString();
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            ONode tokenInfo = node.get("data").get("token_info");
+            ONode cookies = node.get("data").get("cookie_info").get("cookies");
+            BiliLoginCredential credential = BiliLoginCredential.builder()
+                    .dedeUserId(cookies.get(2).get("value").getString())
+                    .dedeUserIdCkMd5(cookies.get(3).get("value").getString())
+                    .expires(LocalDateTime.ofInstant(Instant.ofEpochSecond(cookies.get(0).get("expires").getLong()), ZoneId.systemDefault()))
+                    .sessData(cookies.get(0).get("value").getString())
+                    .biliJct(cookies.get(1).get("value").getString())
+                    .accessToken(tokenInfo.get("access_token").getString())
+                    .refreshToken(tokenInfo.get("refresh_token").getString())
+                    .build();
+            return new R<>(code, message, credential, result);
+        } else {
+            return new R<>(code, message, null, result);
         }
     }
 }
