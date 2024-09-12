@@ -851,7 +851,7 @@ public class BiliClient {
         }
         String result = BiliRequestFactor.getBiliRequest()
                 .url("https://passport.bilibili.com/x/passport-login/sms/send")
-                .addParam("appkey", "1d8b6e7d45233436")
+                .addParam("appkey", appKey)
                 .addParam("cid", cid)
                 .addParam("tel", tel)
                 .addParam("ts", getTs())
@@ -911,6 +911,25 @@ public class BiliClient {
                     .refreshToken(tokenInfo.get("refresh_token").getString())
                     .build();
             return new R<>(code, message, credential, result);
+        } else {
+            return new R<>(code, message, null, result);
+        }
+    }
+    public R<List<BiliAppSplash>> getAppSplashList() {
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("http://app.bilibili.com/x/v2/splash/brand/list")
+                .addParam("appkey", appKey)
+                .addParam("ts", getTs())
+                .appSign(credential,appSec)
+                .buildRequest()
+                .doCallGetString();
+        System.out.println(result);
+        ONode node = ONode.loadStr(result);
+        Integer code = safeGetCode(node);
+        String message = safeGetMessage(node);
+        if (0 == code) {
+            List<BiliAppSplash> objectList = node.get("data").get("list").toObjectList(BiliAppSplash.class);
+            return new R<>(code, message, objectList, result);
         } else {
             return new R<>(code, message, null, result);
         }
