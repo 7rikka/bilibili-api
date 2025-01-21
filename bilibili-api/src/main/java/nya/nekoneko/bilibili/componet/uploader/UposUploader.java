@@ -44,15 +44,13 @@ public class UposUploader {
                 .url("https://member.bilibili.com/preupload")
                 .addParam("name", fileName)
                 .addParam("r", "upos")
-                .addParam("profile", "ugcupos/bup")
-                .addParam("ssl", "0")
-                .addParam("version", "2.14.0.0")
-                .addParam("build", "2140000")
-                .addParam("size", fileSize)
-                .addParam("webVersion", "2.14.0")
                 .addParam("os", "upos")
+                .addParam("profile", "ugcupos/bup")
                 .addParam("zone", line.zone)
+                .addParam("size", fileSize)
                 .addParam("upcdn", line.upcdn)
+                .addParam("ssl", "0")
+                .addParam("webVersion", "2.14.0")
                 .get()
                 .cookie(credential)
                 .buildRequest()
@@ -71,13 +69,13 @@ public class UposUploader {
         log.info("分块大小: " + StatUtil.convertFileSize(chunkSize));
         log.info("线程数: " + threadCount);
 
-        List<String> endpoints = node.get("endpoints").toObjectList(String.class);
-        //选择指定的节点
-        for (String s : endpoints) {
-            if (s.contains(line.upcdn)) {
-                endpoint = s;
-            }
-        }
+//        List<String> endpoints = node.get("endpoints").toObjectList(String.class);
+//        //选择指定的节点
+//        for (String s : endpoints) {
+//            if (s.contains(line.upcdn)) {
+//                endpoint = s;
+//            }
+//        }
         String basicUrl = "https:" + endpoint + "/" + uposUri.substring("upos://".length());
         log.info("目标地址: " + basicUrl);
 //        //STEP.2
@@ -102,7 +100,7 @@ public class UposUploader {
         log.info("STEP3.开始上传");
         BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
         ThreadPoolExecutor service = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadCount);
-        Progress progress = new Progress(fileSize,chunkNum);
+        Progress progress = new Progress(fileSize, chunkNum);
         for (int chunkIndex = 0; chunkIndex < chunkNum; chunkIndex++) {
             byte[] b = new byte[chunkSize];
             int read = bis.read(b);
@@ -173,7 +171,7 @@ public class UposUploader {
     }
 
     private void uploadChunk(String basicUrl, Map<String, String> params, String auth, byte[] data, String info, Progress progress) {
-
+        int i = 0;
         while (true) {
 
             try {
@@ -185,10 +183,15 @@ public class UposUploader {
                         .buildRequest()
                         .doCallGetString();
                 //进度条+1
-//                progress.add(data.length, request);
-                progress.add(data.length);
+                String s = "";
+                if (i > 1) {
+                    s = "[第" + i + "次请求成功]";
+                }
+                progress.add(data.length, request + s);
+//                progress.add(data.length);
                 break;
             } catch (Exception e) {
+                i += 1;
                 log.info(info + "发生异常, 3秒后重新上传.");
                 try {
                     Thread.sleep(3 * 1000);
