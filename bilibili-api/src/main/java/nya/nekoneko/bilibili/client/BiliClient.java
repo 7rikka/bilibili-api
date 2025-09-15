@@ -856,7 +856,7 @@ public class BiliClient {
                 .addParam("tel", tel)
                 .addParam("ts", getTs())
                 .post()
-                .appSign(credential, appSec)
+                .appSign(appSec)
                 .buildRequest()
                 .doCallGetString();
         ONode node = ONode.loadStr(result);
@@ -892,7 +892,7 @@ public class BiliClient {
                 .addParam("tel", tel)
                 .addParam("ts", getTs())
                 .post()
-                .appSign(credential, appSec)
+                .appSign(appSec)
                 .buildRequest()
                 .doCallGetString();
         ONode node = ONode.loadStr(result);
@@ -916,11 +916,14 @@ public class BiliClient {
         }
     }
     public R<List<BiliAppSplash>> getAppSplashList() {
+        if (StrUtil.hasBlank(appKey, appSec)) {
+            throw new RuntimeException("未设置AppKey或AppSecret");
+        }
         String result = BiliRequestFactor.getBiliRequest()
                 .url("http://app.bilibili.com/x/v2/splash/brand/list")
                 .addParam("appkey", appKey)
                 .addParam("ts", getTs())
-                .appSign(credential,appSec)
+                .appSign(appSec)
                 .buildRequest()
                 .doCallGetString();
         System.out.println(result);
@@ -933,6 +936,17 @@ public class BiliClient {
         } else {
             return new R<>(code, message, null, result);
         }
+    }
+
+    public void getNav(){
+        //
+
+        String result = BiliRequestFactor.getBiliRequest()
+                .url("https://api.bilibili.com/x/web-interface/nav")
+                .cookie(credential)
+                .buildRequest()
+                .doCallGetString();
+        System.out.println(result);
     }
 }
 

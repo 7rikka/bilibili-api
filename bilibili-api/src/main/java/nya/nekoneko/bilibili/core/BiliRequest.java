@@ -179,15 +179,9 @@ public class BiliRequest {
     /**
      * APP用
      *
-     * @param credential
      * @return
      */
-    public BiliRequest appSign(BiliLoginCredential credential,String appSec) {
-        if (null != credential) {
-//            if (null != loginInfo.getAccessKey()) {
-//                addParam("access_key", loginInfo.getAccessKey());
-//            }
-        }
+    public BiliRequest appSign(String appSec) {
         String sign = getSign(paramMap, appSec);
         addParam("sign", sign);
         return this;
